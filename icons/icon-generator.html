@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Prompt — Icon Generator</title>
+<style>
+  body {
+    background: #1a1a2e;
+    color: #ccc;
+    font-family: 'Segoe UI', sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px;
+    gap: 30px;
+  }
+  h1 { color: #a78bfa; margin: 0; }
+  .icons-row { display: flex; gap: 30px; align-items: flex-end; flex-wrap: wrap; justify-content: center; }
+  .icon-preview {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  .icon-preview span { font-size: 12px; color: #888; }
+  .icon-preview svg {
+    border-radius: 15%;
+    box-shadow: 0 4px 20px rgba(167, 139, 250, 0.3);
+  }
+  button {
+    padding: 12px 28px;
+    background: linear-gradient(135deg, #a78bfa, #6d28d9);
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  button:hover { transform: scale(1.05); box-shadow: 0 4px 20px rgba(167, 139, 250, 0.5); }
+</style>
+</head>
+<body>
+
+<h1>✨ Prompt — Icon Preview</h1>
+
+<div class="icons-row" id="iconsRow"></div>
+
+<button onclick="downloadIcons()">💾 Скачать все иконки</button>
+
+<canvas id="canvas" style="display:none;"></canvas>
+
+<script>
+// SVG template for the icon
+function createSVG(size) {
+  const half = size / 2;
+  const r = size * 0.22; // corner radius ~22%
+
+  return `
+  <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+    <defs>
+      <linearGradient id="bg${size}" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" style="stop-color:#4c1d95"/>
+        <stop offset="50%" style="stop-color:#6d28d9"/>
+        <stop offset="100%" style="stop-color:#7c3aed"/>
+      </linearGradient>
+      <linearGradient id="spark${size}" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" style="stop-color:#e9d5ff"/>
+        <stop offset="100%" style="stop-color:#a78bfa"/>
+      </linearGradient>
+      <filter id="glow${size}" x="-20%" y="-20%" width="140%" height="140%">
+        <feGaussianBlur stdDeviation="${size * 0.02}" result="blur"/>
+        <feMerge>
+          <feMergeNode in="blur"/>
+          <feMergeNode in="SourceGraphic"/>
+        </feMerge>
+      </filter>
+      <filter id="sparkGlow${size}" x="-30%" y="-30%" width="160%" height="160%">
+        <feGaussianBlur stdDeviation="${size * 0.035}" result="blur"/>
+        <feMerge>
+          <feMergeNode in="blur"/>
+          <feMergeNode in="SourceGraphic"/>
+        </feMerge>
+      </filter>
+    </defs>
+
+    <!-- Rounded square background -->
+    <rect width="${size}" height="${size}" rx="${r}" ry="${r}" fill="url(#bg${size})"/>
+
+    <!-- Subtle inner border -->
+    <rect x="1" y="1" width="${size - 2}" height="${size - 2}" rx="${r}" ry="${r}"
+          fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="${size * 0.02}"/>
+
+    <!-- AI Spark / Lightning symbol (centered) -->
+    <g transform="translate(${half}, ${half})" filter="url(#sparkGlow${size})">
+      <!-- Main spark: chat bubble + lightning -->
+      <path d="M${-size*0.15},${-size*0.28}
+               L${size*0.05},${-size*0.08}
+               L${-size*0.02},${-size*0.02}
+               L${size*0.02},${size*0.28}
+               L${-size*0.12},${size*0.05}
+               L${-size*0.22},${size*0.12}
+               L${-size*0.15},${size*0.02}
+               L${-size*0.28},${size*0.08}
+               Z"
+            fill="url(#spark${size})" stroke="none"/>
+    </g>
+
+    <!-- Small sparkle dots -->
+    <circle cx="${size * 0.22}" cy="${size * 0.22}" r="${size * 0.03}" fill="#c4b5fd" opacity="0.8"/>
+    <circle cx="${size * 0.78}" cy="${size * 0.28}" r="${size * 0.02}" fill="#c4b5fd" opacity="0.5"/>
+    <circle cx="${size * 0.72}" cy="${size * 0.75}" r="${size * 0.025}" fill="#c4b5fd" opacity="0.6"/>
+  </svg>`;
+}
+
+const sizes = [16, 48, 128];
+
+// Render previews
+const row = document.getElementById('iconsRow');
+sizes.forEach(s => {
+  const div = document.createElement('div');
+  div.className = 'icon-preview';
+  div.innerHTML = createSVG(s) + `<span>${s}×${s}</span>`;
+  row.appendChild(div);
+});
+
+// Download all icons as PNG
+function downloadIcons() {
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+
+  sizes.forEach(size => {
+    canvas.width = size;
+    canvas.height = size;
+
+    // Draw SVG onto canvas
+    const svgBlob = new Blob([createSVG(size)], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(svgBlob);
+    const img = new Image();
+
+    img.onload = () => {
+      ctx.clearRect(0, 0, size, size);
+      ctx.drawImage(img, 0, 0, size, size);
+      URL.revokeObjectURL(url);
+
+      // Trigger download
+      canvas.toBlob(blob => {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `icon${size}.png`;
+        a.click();
+        URL.revokeObjectURL(a.href);
+      }, 'image/png');
+    };
+
+    img.src = url;
+  });
+}
+</script>
+
+</body>
+</html>
