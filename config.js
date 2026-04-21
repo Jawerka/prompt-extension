@@ -34,11 +34,12 @@ const DEFAULTS = Object.freeze({
    /** Название модели по умолчанию */
    MODEL: '',
 
-  /**
-   * Максимальное количество токенов для ответа.
-   * Должно быть положительным числом.
-   */
-  MAX_TOKENS: 8192,
+   /**
+    * Максимальное количество токенов для ответа.
+    * Установлено очень большое значение чтобы ответ не обрезался.
+    * Для большинства моделей реально используется меньше чем это значение.
+    */
+   MAX_TOKENS: 131072, // 128K токенов — практически без ограничений
 
   /**
    * Использовать ли модель, уже загруженную на сервере.
@@ -258,7 +259,7 @@ function applyFallbackValues() {
   const applied = [];
 
   const numericChecks = [
-    ['MAX_TOKENS', 8192, (v) => Number.isInteger(v) && v > 0],
+    ['MAX_TOKENS', 131072, (v) => Number.isInteger(v) && v > 0],
     ['MAX_CONTENT_LENGTH', 50000, (v) => Number.isInteger(v) && v > 0],
     ['MAX_DOM_DEPTH', 10, (v) => Number.isInteger(v) && v > 0],
     ['FONT_SIZE', 13, (v) => Number.isInteger(v) && v >= 8 && v <= 16],

@@ -2047,7 +2047,7 @@ async function sendImageToAPI(base64Image, preset, settings, analysisType = 'pro
         model: finalModel,
         messages: messages,
         temperature: 0.3,
-        max_tokens: 8192,
+        max_tokens: DEFAULTS.MAX_TOKENS,
         stream: true
       })
     });
