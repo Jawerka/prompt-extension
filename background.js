@@ -1274,7 +1274,34 @@ async function processStreamResponse(response, signal) {
       const { done, value } = chunkResult;
 
       if (done) {
-        logInfo(`[STREAM] ✅ Streaming завершён`);
+        // Обрабатываем оставшийся буфер перед завершением
+        // Сервер может завершить поток без '\n' в последнем чанке
+        if (buffer.trim()) {
+          const lines = buffer.split('\n');
+          for (const line of lines) {
+            const trimmedLine = line.trim();
+            if (!trimmedLine.startsWith('data: ')) continue;
+            const dataStr = trimmedLine.slice(6);
+            if (dataStr === '[DONE]') continue;
+            try {
+              const data = JSON.parse(dataStr);
+              const choice = data.choices?.[0];
+              const content = choice?.delta?.content || '';
+              const reasoning = choice?.delta?.reasoning_content || '';
+              if (reasoning) {
+                fullReasoning += reasoning;
+                reasoningCount++;
+              }
+              if (content) {
+                contentCount++;
+                fullResponse += content;
+              }
+            } catch (e) {
+              // Игнорируем ошибки парсинга остатка буфера
+            }
+          }
+        }
+        logInfo('[STREAM] ✅ Streaming завершён');
         logInfo(`[STREAM] Статистика:`);
         logInfo(`[STREAM]   - Всего чанков: ${chunkCount}`);
         logInfo(`[STREAM]   - Чанков с контентом: ${contentCount}`);
@@ -2112,6 +2139,32 @@ async function processImageAnalysisStream(response, signal = null) {
       }
 
       if (done) {
+        // Обрабатываем оставшийся буфер перед завершением
+        // Сервер может завершить поток без '\n' в последнем чанке
+        if (buffer.trim()) {
+          const lines = buffer.split('\n');
+          for (const line of lines) {
+            const trimmedLine = line.trim();
+            if (!trimmedLine.startsWith('data: ')) continue;
+            const dataStr = trimmedLine.slice(6);
+            if (dataStr === '[DONE]') continue;
+            try {
+              const data = JSON.parse(dataStr);
+              const choice = data.choices?.[0];
+              const content = choice?.delta?.content || '';
+              const reasoning = choice?.delta?.reasoning_content || '';
+              if (reasoning) {
+                fullReasoning += reasoning;
+              }
+              if (content) {
+                contentCount++;
+                fullResponse += content;
+              }
+            } catch (e) {
+              // Игнорируем ошибки парсинга остатка буфера
+            }
+          }
+        }
         logInfo('Streaming завершён, чанков:', chunkCount);
         break;
       }
@@ -2123,10 +2176,10 @@ async function processImageAnalysisStream(response, signal = null) {
       // Обновляем timestamp последних данных
       markDataReceived();
 
-      const lines = buffer.split('\n');
-      buffer = lines.pop() || '';
+      const lines2 = buffer.split('\n');
+      buffer = lines2.pop() || '';
 
-      for (const line of lines) {
+      for (const line of lines2) {
         const trimmedLine = line.trim();
 
         if (trimmedLine.startsWith('data: ')) {
